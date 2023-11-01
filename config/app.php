@@ -155,7 +155,7 @@ return [
     |
      */
 
-    'epub_checker' => "c:/Users/lords/Downloads/epubcheck-5.1.0",
+    'epub_checker' => "",
 
     'providers' => ServiceProvider::defaultProviders()->merge([
         /*
