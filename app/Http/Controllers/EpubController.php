@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Kiwilan\Ebook\Ebook;
 
 class EpubController extends Controller
 {
+
     protected $epubFiles = [
         'https://account.publishdrive.com/Books/Book1.epub',
         'https://account.publishdrive.com/Books/Book2.epub',
@@ -17,18 +18,22 @@ class EpubController extends Controller
 
     ];
 
+    protected $epubChacker;
+
     protected $currentBook;
 
     protected $currentBookPath = '';
 
     public function index()
     {
-        //return $this->processEbook();
+
         return view('epub')->with(['files' => $this->epubFiles]);
     }
 
     public function processEbook($id)
     {
+        $this->epubChacker = config('app.epub_checker');
+        //dd($this->epubChacker);
         $this->currentBook = $id;
         $success = $this->downloadEpub($this->epubFiles[$this->currentBook]);
         if (!$success) {
@@ -68,12 +73,20 @@ class EpubController extends Controller
     protected function writeEpub()
     {
         $metadata = $this->readEpub();
+        $this->checkEpub();
+
         $output = View::make('epubXML')->with($metadata)->render();
-        Storage::disk('public')->put('epub' . $this->currentBook + 1 . '.xml', $output);
+
+        Storage::disk('public')->append('epub' . $this->currentBook + 1 . '.xml', $output);
     }
 
     protected function checkEpub()
     {
+        if (Storage::disk('public')->exists("check.xml")) {
+            Storage::disk('public')->delete("check.xml");
+        }
 
+        $result = Process::run("java -jar " . $this->epubChacker . DIRECTORY_SEPARATOR . "epubcheck.jar " . $this->currentBookPath . " --out " . public_path('storage') . DIRECTORY_SEPARATOR . "epub" . $this->currentBook + 1 . ".xml");
+        return $result->output();
     }
 }
